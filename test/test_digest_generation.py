@@ -2,7 +2,7 @@ import dataclasses
 import datetime
 import json
 
-from estat_2019_0396.estat_2019_0396 import (
+from estat_2019_0396.digest_generation import (
     Digest,
     DigestEncoder,
     DigestType,

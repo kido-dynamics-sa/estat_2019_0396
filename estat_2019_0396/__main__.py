@@ -2,7 +2,7 @@ import dataclasses
 import datetime
 import json
 
-from estat_2019_0396.estat_2019_0396 import DigestEncoder, digest_generation
+from estat_2019_0396.digest_generation import DigestEncoder, digest_generation
 
 if __name__ == "__main__":
     fmt = "%Y-%m-%d %H:%M:%S"
