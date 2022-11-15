@@ -52,6 +52,7 @@ class Digestor:
         """State-machine that reads sequences of events and produces a sequence of digests."""
         self.current_digest = None
         self.last_time = t0
+        self.last_cell = "unknown_cell"
         self.short_dt = short_dt
         self.long_dt = long_dt
         self.cutoff = cutoff
@@ -60,8 +61,13 @@ class Digestor:
     def close_and_start(self, time, cell) -> Digest:
         """Close current digest, return it, and create a new one."""
         previous_digest = self.close_digest()
-        self.current_digest = create_digest(time, cell)
-        self.last_time = time
+        if previous_digest and previous_digest.num_events > 1:
+            self.current_digest = create_digest(self.last_time, self.last_cell)
+            self.process_event(time, cell)
+        else:
+            self.current_digest = create_digest(time, cell)
+            self.last_time = time
+            self.last_cell = cell
         return previous_digest
 
     def close_digest(self) -> Digest:

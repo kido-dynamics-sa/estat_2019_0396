@@ -99,6 +99,7 @@ def test_digest_many_event_single_cell(many_event_single_cell):
 
 def test_digest_a_bit_of_everything(a_bit_of_everything):
     output = digest_generation(a_bit_of_everything)
+    assert len(output) == 6
     assert output[0] == Digest(
         start_time=datetime.datetime(2021, 8, 15, 10, 0, 0),
         cells=set("A"),
@@ -108,10 +109,28 @@ def test_digest_a_bit_of_everything(a_bit_of_everything):
         end_time=datetime.datetime(2021, 8, 15, 10, 0, 0),
     )
     assert output[-1] == Digest(
-        start_time=datetime.datetime(2022, 1, 1, 14, 0, 0),
+        start_time=datetime.datetime(2022, 1, 1, 12, 1, 10),
         cells=set("B"),
-        num_events=5,
+        num_events=6,
         num_cells=1,
         type=DigestType.LongOneCell,
         end_time=datetime.datetime(2022, 1, 1, 18, 0, 0),
     )
+
+
+def test_digest_back2back():
+    elist = [
+        ["2022-01-01 12:01:00", "A"],
+        ["2022-01-01 12:01:02", "B"],
+        ["2022-01-01 12:01:04", "A"],
+        ["2022-01-01 12:01:05", "B"],
+        ["2022-01-01 12:01:06", "B"],
+        ["2022-01-01 12:01:07", "A"],
+        ["2022-01-01 14:00:00", "A"],
+        ["2022-01-01 15:00:00", "A"],
+    ]
+    output = digest_generation(events_from_str(elist))
+    assert len(output) == 2
+    assert output[0].end_time == output[1].start_time
+    assert sum(o.num_events for o in output) == len(elist) + 1
+    return
