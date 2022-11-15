@@ -1,9 +1,56 @@
 import datetime
 
 import pandas as pd
+import pytest
 
 from estat_2019_0396.digest_generation import Digest, DigestType
-from estat_2019_0396.digest_pandas import digest_to_dataframe, series_to_events
+from estat_2019_0396.digest_pandas import (
+    digest_multi_user,
+    digest_single_user,
+    digest_to_dataframe,
+    series_to_events,
+)
+
+
+@pytest.fixture()
+def simple_events_df():
+    return pd.DataFrame(
+        {
+            "time": pd.date_range(
+                "2022-01-01 01:00:00", "2022-01-01 05:00:00", freq="1H"
+            ),
+            "cell": pd.Series(["A"] * 5),
+        }
+    )
+
+
+@pytest.fixture()
+def mixed_events_df():
+    elist = [
+        ["2021-08-15 10:00:00", "A"],
+        ["2021-08-18 10:00:00", "A"],
+        ["2021-09-15 10:00:00", "A"],
+        ["2021-09-15 10:00:01", "A"],
+        ["2022-01-01 10:00:00", "A"],
+        ["2022-01-01 12:00:00", "A"],
+        ["2022-01-01 12:01:00", "B"],
+        ["2022-01-01 12:01:04", "A"],
+        ["2022-01-01 12:01:05", "B"],
+        ["2022-01-01 12:01:06", "B"],
+        ["2022-01-01 12:01:07", "A"],
+        ["2022-01-01 12:01:10", "B"],
+        ["2022-01-01 14:00:00", "B"],
+        ["2022-01-01 15:00:00", "B"],
+        ["2022-01-01 16:00:00", "B"],
+        ["2022-01-01 17:00:00", "B"],
+        ["2022-01-01 18:00:00", "B"],
+    ]
+    return pd.DataFrame(
+        {
+            "time": pd.to_datetime([e[0] for e in elist]),
+            "cell": pd.Series([e[1] for e in elist]),
+        }
+    )
 
 
 def events_from_str(elist):
@@ -18,8 +65,10 @@ def test_series_to_events():
     cells = pd.Series(["A"] * 5)
     events = series_to_events(times, cells)
     assert len(events) == 5
-    assert events[0] == (datetime.datetime(2022, 1, 1, 1, 0, 0), "A")
-    assert events[-1] == (datetime.datetime(2022, 1, 1, 5, 0, 0), "A")
+    assert events[0]["time"] == datetime.datetime(2022, 1, 1, 1, 0, 0)
+    assert events[0]["cell"] == "A"
+    assert events[-1]["time"] == datetime.datetime(2022, 1, 1, 5, 0, 0)
+    assert events[-1]["cell"] == "A"
 
 
 def test_dataframe_single():
@@ -94,66 +143,70 @@ def test_dataframe_many():
     assert df.shape == (len(digests), 6)
 
 
-#     digests = [
-#     {
-#         "start_time": "2021-08-15T10:00:00",
-#         "cells": [
-#             "A"
-#         ],
-#         "num_events": 1,
-#         "num_cells": 1,
-#         "type": "1-cell-repetition",
-#         "end_time": "2021-08-15T10:00:00"
-#     },
-#     {
-#         "start_time": "2021-08-18T10:00:00",
-#         "cells": [
-#             "A"
-#         ],
-#         "num_events": 1,
-#         "num_cells": 1,
-#         "type": "1-cell-repetition",
-#         "end_time": "2021-08-18T10:00:00"
-#     },
-#     {
-#         "start_time": "2021-09-15T10:00:00",
-#         "cells": [
-#             "A"
-#         ],
-#         "num_events": 2,
-#         "num_cells": 1,
-#         "type": "1-cell-repetition",
-#         "end_time": "2021-09-15T10:00:01"
-#     },
-#     {
-#         "start_time": "2022-01-01T10:00:00",
-#         "cells": [
-#             "A"
-#         ],
-#         "num_events": 2,
-#         "num_cells": 1,
-#         "type": "1-cell-repetition",
-#         "end_time": "2022-01-01T12:00:00"
-#     },
-#     {
-#         "start_time": "2022-01-01T12:01:00",
-#         "cells": [
-#             "B",
-#             "A"
-#         ],
-#         "num_events": 6,
-#         "num_cells": 2,
-#         "type": "2-cell-flapping",
-#         "end_time": "2022-01-01T12:01:10"
-#     },
-#     {
-#         "start_time": "2022-01-01T12:01:10",
-#         "cells": [
-#             "B"
-#         ],
-#         "num_events": 6,
-#         "num_cells": 1,
-#         "type": "1-cell-repetition",
-#         "end_time": "2022-01-01T18:00:00"
-#     }
-# ]
+def test_digest_single():
+    times = pd.date_range("2022-01-01 01:00:00", "2022-01-01 05:00:00", freq="1H")
+    cells = pd.Series(["A"] * 5)
+    df = digest_single_user(times, cells)
+    print(df.T)
+    assert isinstance(df, pd.DataFrame)
+    assert "start_time" in df.columns
+    assert "end_time" in df.columns
+    assert "cells" in df.columns
+    assert "num_cells" in df.columns
+    assert "num_events" in df.columns
+    assert "type" in df.columns
+    assert df.shape == (1, 6)
+
+
+def test_digest_multi_user_simple_sorted(simple_events_df):
+    events_df = pd.concat(
+        {"Agent1": simple_events_df},
+        names=["user"],
+    )
+
+    df = digest_multi_user(events_df)
+    print(df)
+    assert isinstance(df, pd.DataFrame)
+    assert "user" in df.columns
+    assert "start_time" in df.columns
+    assert "end_time" in df.columns
+    assert "cells" in df.columns
+    assert "num_cells" in df.columns
+    assert "num_events" in df.columns
+    assert "type" in df.columns
+    assert df.shape == (1, 7)
+
+
+def test_digest_multi_user_many_sorted(simple_events_df, mixed_events_df):
+    events_df = pd.concat(
+        {
+            "Agent1": simple_events_df,
+            "Agent2": mixed_events_df,
+        },
+        names=["user"],
+    )
+
+    df = digest_multi_user(events_df)
+    print(df)
+    assert df["user"].nunique() == 2
+    num_digest_per_user = df.groupby("user")["start_time"].count()
+    assert num_digest_per_user["Agent1"] == 1
+    assert num_digest_per_user["Agent2"] == 6
+
+
+def test_digest_multi_user_many_unsorted(simple_events_df, mixed_events_df):
+    events_df = pd.concat(
+        {
+            "Agent1": simple_events_df,
+            "Agent2": mixed_events_df,
+        },
+        names=["user"],
+    ).sample(frac=1, random_state=47252)
+
+    df = digest_multi_user(events_df)
+    print(events_df)
+    print(df)
+    assert df["user"].nunique() == 2
+    num_digest_per_user = df.groupby("user")["start_time"].count()
+    assert num_digest_per_user["Agent1"] == 1
+    assert num_digest_per_user["Agent2"] == 6

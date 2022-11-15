@@ -116,6 +116,10 @@ class Digestor:
         """
         if self.current_digest:
             dt = (time - self.last_time).total_seconds()
+            if dt <= 0:
+                raise Exception(
+                    f"events are not ordered in time. Last event was at {self.last_time} and the current now at {time}."
+                )
             if self.current_digest.type == DigestType.ShortOneCell:
                 if dt < self.short_dt and cell in self.current_digest.cells:
                     self.continue_digest(time)
