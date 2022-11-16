@@ -4,7 +4,7 @@ from typing import Dict, List
 
 import pandas as pd
 
-from .digest_generation import Digest, digest_generation
+from .digest_generation import Digest, digest_generation_iter
 
 
 def series_to_events(times: pd.Series, cells: pd.Series) -> List[Dict]:
@@ -27,7 +27,7 @@ def digest_to_dataframe(digests: List[Digest]) -> pd.DataFrame:
 
 
 def digest_single_user(times: pd.Series, cells: pd.Series) -> pd.DataFrame:
-    return digest_to_dataframe(digest_generation(series_to_events(times, cells)))
+    return digest_to_dataframe(digest_generation_iter(times, cells))
 
 
 def digest_multi_user(

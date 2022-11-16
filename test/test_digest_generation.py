@@ -8,6 +8,8 @@ from estat_2019_0396.digest_generation import (
     DigestType,
     create_digest,
     digest_generation,
+    digest_generation_dict,
+    digest_generation_iter,
 )
 
 
@@ -16,6 +18,11 @@ def events_from_str(elist):
     return [
         {"time": datetime.datetime.strptime(e[0], fmt), "cell": e[1]} for e in elist
     ]
+
+
+def times_cells_from_str(elist):
+    fmt = "%Y-%m-%d %H:%M:%S"
+    return [datetime.datetime.strptime(e[0], fmt) for e in elist], [e[1] for e in elist]
 
 
 def test_create_digest():
@@ -119,3 +126,19 @@ def test_digest_back2back():
     assert output[0].end_time == output[1].start_time
     assert sum(o.num_events for o in output) == len(elist) + 1
     return
+
+
+def test_digest_iter():
+    elist = [
+        ["2022-01-01 12:01:00", "A"],
+        ["2022-01-01 12:01:02", "B"],
+        ["2022-01-01 12:01:04", "A"],
+        ["2022-01-01 12:01:05", "B"],
+        ["2022-01-01 12:01:06", "B"],
+        ["2022-01-01 12:01:07", "A"],
+        ["2022-01-01 14:00:00", "A"],
+        ["2022-01-01 15:00:00", "A"],
+    ]
+    output_dict = digest_generation_dict(events_from_str(elist))
+    output_iter = digest_generation_iter(*times_cells_from_str(elist))
+    assert output_dict == output_iter
