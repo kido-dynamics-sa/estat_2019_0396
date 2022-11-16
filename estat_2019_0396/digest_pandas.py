@@ -39,7 +39,11 @@ def digest_multi_user(
     return (
         df.sort_values(by=["user", "time"])
         .groupby(user_col)
-        .apply(lambda x: digest_single_user(x[time_col], x[cell_col]))
+        .apply(
+            lambda x: digest_single_user(
+                x.reset_index(drop=True)[time_col], x.reset_index(drop=True)[cell_col]
+            )
+        )
         .reset_index()
         .rename(columns={"level_1": "digest_id"})
     )
