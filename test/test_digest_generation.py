@@ -53,14 +53,14 @@ def test_digest_many_event_single_cell():
         "2022-01-01 12:00:00",
         "2022-01-01 15:00:01",
     ]
-    many_event_single_cell = events_from_str([[time, "A"] for time in times])
+    many_event_single_cell = events_from_str([[time, "Acell"] for time in times])
     output = digest_generation(many_event_single_cell)
     assert len(output) == 1
     assert output[0].start_time == many_event_single_cell[0]["time"]
     assert output[0].end_time == many_event_single_cell[-1]["time"]
     assert output[0].num_events == len(many_event_single_cell)
     assert output[0].num_cells == 1
-    assert output[0].cells == set("A")
+    assert output[0].cells == set(["Acell"])
 
 
 def test_digest_a_bit_of_everything():
@@ -71,17 +71,17 @@ def test_digest_a_bit_of_everything():
         ["2021-09-15 10:00:01", "A"],
         ["2022-01-01 10:00:00", "A"],
         ["2022-01-01 12:00:00", "A"],
-        ["2022-01-01 12:01:00", "B"],
+        ["2022-01-01 12:01:00", "B1"],
         ["2022-01-01 12:01:04", "A"],
-        ["2022-01-01 12:01:05", "B"],
-        ["2022-01-01 12:01:06", "B"],
+        ["2022-01-01 12:01:05", "B1"],
+        ["2022-01-01 12:01:06", "B1"],
         ["2022-01-01 12:01:07", "A"],
-        ["2022-01-01 12:01:10", "B"],
-        ["2022-01-01 14:00:00", "B"],
-        ["2022-01-01 15:00:00", "B"],
-        ["2022-01-01 16:00:00", "B"],
-        ["2022-01-01 17:00:00", "B"],
-        ["2022-01-01 18:00:00", "B"],
+        ["2022-01-01 12:01:10", "B1"],
+        ["2022-01-01 14:00:00", "B1"],
+        ["2022-01-01 15:00:00", "B1"],
+        ["2022-01-01 16:00:00", "B1"],
+        ["2022-01-01 17:00:00", "B1"],
+        ["2022-01-01 18:00:00", "B1"],
     ]
     output = digest_generation(events_from_str(elist))
     assert len(output) == 6
@@ -95,7 +95,7 @@ def test_digest_a_bit_of_everything():
     )
     assert output[-1] == Digest(
         start_time=datetime.datetime(2022, 1, 1, 12, 1, 10),
-        cells=set("B"),
+        cells=set(["B1"]),
         num_events=6,
         num_cells=1,
         type=DigestType.LongOneCell,

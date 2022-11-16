@@ -38,7 +38,7 @@ class DigestEncoder(json.JSONEncoder):
 
 
 def create_digest(time, cell):
-    return Digest(start_time=time, cells=set(cell), num_events=1, num_cells=1)
+    return Digest(start_time=time, cells=set([cell]), num_events=1, num_cells=1)
 
 
 class Digestor:
