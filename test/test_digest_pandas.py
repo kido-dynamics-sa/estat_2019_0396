@@ -168,13 +168,14 @@ def test_digest_multi_user_simple_sorted(simple_events_df):
     print(df)
     assert isinstance(df, pd.DataFrame)
     assert "user" in df.columns
+    assert "digest_id" in df.columns
     assert "start_time" in df.columns
     assert "end_time" in df.columns
     assert "cells" in df.columns
     assert "num_cells" in df.columns
     assert "num_events" in df.columns
     assert "type" in df.columns
-    assert df.shape == (1, 7)
+    assert df.shape == (1, 8)
 
 
 def test_digest_multi_user_many_sorted(simple_events_df, mixed_events_df):
@@ -192,6 +193,20 @@ def test_digest_multi_user_many_sorted(simple_events_df, mixed_events_df):
     num_digest_per_user = df.groupby("user")["start_time"].count()
     assert num_digest_per_user["Agent1"] == 1
     assert num_digest_per_user["Agent2"] == 6
+
+
+def test_digest_multi_user_indexing(simple_events_df, mixed_events_df):
+    events_df = pd.concat(
+        {
+            "Agent1": simple_events_df,
+            "Agent2": mixed_events_df,
+        },
+        names=["user"],
+    )
+
+    df = digest_multi_user(events_df)
+    print(df)
+    assert df[["user", "digest_id"]].drop_duplicates().shape[0] == df.shape[0]
 
 
 def test_digest_multi_user_many_unsorted(simple_events_df, mixed_events_df):
