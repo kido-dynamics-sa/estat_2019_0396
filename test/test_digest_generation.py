@@ -110,6 +110,33 @@ def test_digest_a_bit_of_everything():
     )
 
 
+def test_digest_long_3cell_flapping():
+    elist = [
+        ["2022-01-01 10:00:00", "A"],
+        ["2022-01-01 10:00:05", "B"],
+        ["2022-01-01 10:00:10", "A"],
+        ["2022-01-01 10:00:15", "A"],
+        ["2022-01-01 10:00:20", "A"],
+        ["2022-01-01 10:00:25", "B"],
+        ["2022-01-01 10:00:30", "C"],
+        ["2022-01-01 10:00:35", "A"],
+        ["2022-01-01 10:00:40", "C"],
+        ["2022-01-01 10:00:45", "C"],
+        ["2022-01-01 10:00:50", "B"],
+        ["2022-01-01 10:00:55", "A"],
+    ]
+    output = digest_generation(events_from_str(elist))
+    assert len(output) == 1
+    assert output[0] == Digest(
+        start_time=datetime.datetime(2022, 1, 1, 10, 0, 0),
+        cells=set(["A", "B", "C"]),
+        num_events=len(elist),
+        num_cells=3,
+        type=DigestType.ShortThreeCell,
+        end_time=datetime.datetime(2022, 1, 1, 10, 0, 55),
+    )
+
+
 def test_digest_back2back():
     elist = [
         ["2022-01-01 12:01:00", "A"],

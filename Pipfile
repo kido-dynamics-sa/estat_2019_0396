@@ -8,6 +8,7 @@ python_version = "3.9"
 
 [packages]
 pandas = ">1.5.*"
+typer = "*"
 
 [dev-packages]
 black = "*"
