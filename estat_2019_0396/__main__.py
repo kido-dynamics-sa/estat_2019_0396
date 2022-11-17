@@ -1,38 +1,37 @@
-import dataclasses
-import datetime
-import json
+import enum
+from pathlib import Path
+from typing import Optional
 
-from estat_2019_0396.estat_2019_0396 import DigestEncoder, digest_generation
+import pandas as pd
+import typer
 
-if __name__ == "__main__":
-    fmt = "%Y-%m-%d %H:%M:%S"
-    elist = [
-        ["2021-08-15 10:00:00", "A"],
-        ["2021-08-18 10:00:00", "A"],
-        ["2021-09-15 10:00:00", "A"],
-        ["2021-09-15 10:00:01", "A"],
-        ["2022-01-01 10:00:00", "A"],
-        ["2022-01-01 12:00:00", "A"],
-        ["2022-01-01 12:01:00", "B"],
-        ["2022-01-01 12:01:04", "A"],
-        ["2022-01-01 12:01:05", "B"],
-        ["2022-01-01 12:01:06", "B"],
-        ["2022-01-01 12:01:07", "A"],
-        ["2022-01-01 12:01:10", "B"],
-        ["2022-01-01 14:00:00", "B"],
-        ["2022-01-01 15:00:00", "B"],
-        ["2022-01-01 16:00:00", "B"],
-        ["2022-01-01 17:00:00", "B"],
-        ["2022-01-01 18:00:00", "B"],
-    ]
-    events = [
-        {"time": datetime.datetime.strptime(e[0], fmt), "cell": e[1]} for e in elist
-    ]
+from estat_2019_0396 import digest_multi_user
 
+
+class Compression(enum.Enum):
+    ZIP = "zip"
+    GZIP = "gzip"
+
+
+def main(
+    input: Path = typer.Argument(
+        ...,
+        exists=True,
+        readable=True,
+    ),
+    output: Optional[Path] = typer.Option(
+        None,
+        writable=True,
+    ),
+    compression: Optional[Compression] = None,
+):
+    df = pd.read_csv(input, parse_dates=["time"])
     print(
-        json.dumps(
-            [dataclasses.asdict(d) for d in digest_generation(events)],
-            cls=DigestEncoder,
-            indent=4,
+        digest_multi_user(df).to_csv(
+            output, compression=compression.value if compression else None, index=False
         )
     )
+
+
+if __name__ == "__main__":
+    typer.run(main)

@@ -38,7 +38,7 @@ class DigestEncoder(json.JSONEncoder):
 
 
 def create_digest(time, cell):
-    return Digest(start_time=time, cells=set(cell), num_events=1, num_cells=1)
+    return Digest(start_time=time, cells=set([cell]), num_events=1, num_cells=1)
 
 
 class Digestor:
@@ -52,6 +52,7 @@ class Digestor:
         """State-machine that reads sequences of events and produces a sequence of digests."""
         self.current_digest = None
         self.last_time = t0
+        self.last_cell = "unknown_cell"
         self.short_dt = short_dt
         self.long_dt = long_dt
         self.cutoff = cutoff
@@ -60,8 +61,13 @@ class Digestor:
     def close_and_start(self, time, cell) -> Digest:
         """Close current digest, return it, and create a new one."""
         previous_digest = self.close_digest()
-        self.current_digest = create_digest(time, cell)
-        self.last_time = time
+        if previous_digest and previous_digest.num_events > 1:
+            self.current_digest = create_digest(self.last_time, self.last_cell)
+            self.process_event(time, cell)
+        else:
+            self.current_digest = create_digest(time, cell)
+            self.last_time = time
+            self.last_cell = cell
         return previous_digest
 
     def close_digest(self) -> Digest:
@@ -82,7 +88,7 @@ class Digestor:
         self.current_digest.cells.add(cell)
         self.current_digest.num_cells += 1
 
-    def process_event(self, time, cell) -> Optional[Digest]:
+    def process_event(self, time, cell, last_time=None) -> Optional[Digest]:
         """Advance the state by processing the current event.
 
         This function encodes the logic of digest generation by
@@ -109,7 +115,11 @@ class Digestor:
         ```
         """
         if self.current_digest:
-            dt = (time - self.last_time).total_seconds()
+            dt = (time - (last_time or self.last_time)).total_seconds()
+            if dt < 0:
+                raise Exception(
+                    f"events are not ordered in time. Last event was at {self.last_time} and the current one at {time}."
+                )
             if self.current_digest.type == DigestType.ShortOneCell:
                 if dt < self.short_dt and cell in self.current_digest.cells:
                     self.continue_digest(time)
@@ -157,6 +167,9 @@ class Digestor:
         return None
 
     def process_events(self, ordered_events) -> List[Digest]:
+        return self._process_events_dict(ordered_events)
+
+    def _process_events_dict(self, ordered_events) -> List[Digest]:
         """Process a sequence of ordered events.
 
         Returns the list of _closed_ digests.
@@ -166,9 +179,42 @@ class Digestor:
         ]
         return [digest for digest in digests if digest]
 
+    def _process_events_iter(self, ordered_times, ordered_cells) -> List[Digest]:
+        """Process a sequence of ordered events.
 
-def digest_generation(ordered_events):
+        Returns the list of _closed_ digests.
+        """
+        if len(ordered_times) != len(ordered_cells):
+            raise Exception(
+                f"Unequal number of entries: {len(ordered_times)} times but {len(ordered_cells)} cells"
+            )
+        digests = [
+            self.process_event(
+                ordered_times[i],
+                ordered_cells[i],
+                last_time=(
+                    ordered_times[i - 1]
+                    if i > 0
+                    else datetime.datetime(1900, 1, 1, 0, 0, 0)
+                ),
+            )
+            for i in range(len(ordered_times))
+        ]
+        return [digest for digest in digests if digest]
+
+
+def digest_generation_dict(ordered_events):
     digestor = Digestor()
-    digests = digestor.process_events(ordered_events)
+    digests = digestor._process_events_dict(ordered_events)
     digests.append(digestor.close_digest())
     return digests
+
+
+def digest_generation_iter(ordered_times, ordered_cells):
+    digestor = Digestor()
+    digests = digestor._process_events_iter(ordered_times, ordered_cells)
+    digests.append(digestor.close_digest())
+    return digests
+
+
+digest_generation = digest_generation_dict

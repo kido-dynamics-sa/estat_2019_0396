@@ -38,4 +38,4 @@ jobs:
 
       - name: Smoke test docker image
         run: |
-          docker run --rm estat_2019_0396:test 10
+          docker run --rm estat_2019_0396:test --help
