@@ -19,6 +19,7 @@ def sample_digests():
             start_time=datetime.datetime(2022, 1, 1, 1, 0, 0),
             end_time=datetime.datetime(2022, 1, 1, 5, 0, 0),
             events_in_cell={"A": 10, "B": 4, "C": 3},
+            start_cell="A",
             num_cells=3,
             num_events=16,
             type=DigestType.ShortThreeCell,
@@ -91,11 +92,13 @@ def test_dataframe_single(sample_digests):
     assert isinstance(df, pd.DataFrame)
     assert "start_time" in df.columns
     assert "end_time" in df.columns
+    assert "start_cell" in df.columns
+    assert "end_cell" in df.columns
     assert "events_in_cell" in df.columns
     assert "num_cells" in df.columns
     assert "num_events" in df.columns
     assert "type" in df.columns
-    assert df.shape == (1, 6)
+    assert df.shape == (1, 8)
 
 
 def test_dataframe_dtypes(sample_digests):
@@ -111,6 +114,8 @@ def test_dataframe_many():
             start_time=datetime.datetime(2022, 1, 1, 1, 0, 0),
             end_time=datetime.datetime(2022, 1, 1, 5, 0, 0),
             events_in_cell={"A": 10, "B": 5, "C": 1},
+            start_cell="A",
+            end_cell="B",
             num_cells=3,
             num_events=16,
             type=DigestType.ShortThreeCell,
@@ -118,6 +123,8 @@ def test_dataframe_many():
         Digest(
             start_time=datetime.datetime(2022, 1, 1, 1, 0, 0),
             end_time=datetime.datetime(2022, 1, 5, 0, 0, 0),
+            start_cell="A",
+            end_cell="A",
             events_in_cell={"A": 150},
             num_cells=1,
             num_events=150,
@@ -129,12 +136,14 @@ def test_dataframe_many():
             events_in_cell={"A": 2, "B": 2},
             num_cells=2,
             num_events=4,
+            start_cell="A",
+            end_cell="A",
             type=DigestType.ShortTwoCell,
         ),
     ]
     df = digest_to_dataframe(digests)
     print(df)
-    assert df.shape == (len(digests), 6)
+    assert df.shape == (len(digests), 8)
 
 
 def test_digest_single():
@@ -145,11 +154,13 @@ def test_digest_single():
     assert isinstance(df, pd.DataFrame)
     assert "start_time" in df.columns
     assert "end_time" in df.columns
+    assert "start_cell" in df.columns
+    assert "end_cell" in df.columns
     assert "events_in_cell" in df.columns
     assert "num_cells" in df.columns
     assert "num_events" in df.columns
     assert "type" in df.columns
-    assert df.shape == (1, 6)
+    assert df.shape == (1, 8)
 
 
 def test_digest_multi_user_simple_sorted(simple_events_df):
@@ -165,11 +176,13 @@ def test_digest_multi_user_simple_sorted(simple_events_df):
     assert "digest_id" in df.columns
     assert "start_time" in df.columns
     assert "end_time" in df.columns
+    assert "start_cell" in df.columns
+    assert "end_cell" in df.columns
     assert "events_in_cell" in df.columns
     assert "num_cells" in df.columns
     assert "num_events" in df.columns
     assert "type" in df.columns
-    assert df.shape == (1, 8)
+    assert df.shape == (1, 10)
 
 
 def test_digest_multi_user_many_sorted(simple_events_df, mixed_events_df):

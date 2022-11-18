@@ -16,11 +16,13 @@ class DigestType(Enum):
 @dataclass
 class Digest:
     start_time: datetime.datetime
+    start_cell: str
     events_in_cell: dict[str, int]
     num_events: int
     num_cells: int
     type: DigestType = DigestType.ShortOneCell
     end_time: Optional[datetime.datetime] = None
+    end_cell: Optional[str] = None
 
     @property
     def cells(self):
@@ -50,7 +52,13 @@ class DigestEncoder(json.JSONEncoder):
 
 
 def create_digest(time, cell):
-    return Digest(start_time=time, events_in_cell={cell: 1}, num_events=1, num_cells=1)
+    return Digest(
+        start_time=time,
+        events_in_cell={cell: 1},
+        num_events=1,
+        num_cells=1,
+        start_cell=cell,
+    )
 
 
 class Digestor:
@@ -87,12 +95,14 @@ class Digestor:
         previous_digest = self.current_digest
         if previous_digest:
             previous_digest.end_time = self.last_time
+            previous_digest.end_cell = self.last_cell
         self.current_digest = None
         return previous_digest
 
     def continue_digest(self, time, cell) -> None:
         """Add event to the current digest."""
         self.last_time = time
+        self.last_cell = cell
         self.current_digest.add_event(cell)
 
     def process_event(self, time, cell, last_time=None) -> Optional[Digest]:

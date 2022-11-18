@@ -49,6 +49,7 @@ def test_digest_single_event():
     assert output[0].num_events == 1
     assert output[0].num_cells == 1
     assert output[0].cells == set("A")
+    assert output[0].start_cell == output[0].end_cell == "A"
 
 
 def test_digest_many_event_single_cell():
@@ -68,6 +69,26 @@ def test_digest_many_event_single_cell():
     assert output[0].num_events == len(many_event_single_cell)
     assert output[0].num_cells == 1
     assert output[0].cells == set(["Acell"])
+    assert output[0].start_cell == output[0].end_cell == "Acell"
+
+
+def test_digest_simple_2cell_flapping():
+    elist = [
+        ["2022-01-01 10:00:00", "A"],
+        ["2022-01-01 10:00:05", "B"],
+    ]
+    output = digest_generation(events_from_str(elist))
+    assert len(output) == 1
+    digest = output[0]
+    print(digest)
+    assert digest.start_time == datetime.datetime(2022, 1, 1, 10, 0, 0)
+    assert digest.cells == set(["A", "B"])
+    assert digest.num_events == len(elist)
+    assert digest.num_cells == 2
+    assert digest.type == DigestType.ShortTwoCell
+    assert digest.end_time == datetime.datetime(2022, 1, 1, 10, 0, 5)
+    assert digest.start_cell == "A"
+    assert digest.end_cell == "B"
 
 
 def test_digest_a_bit_of_everything():
@@ -94,19 +115,23 @@ def test_digest_a_bit_of_everything():
     assert len(output) == 6
     assert output[0] == Digest(
         start_time=datetime.datetime(2021, 8, 15, 10, 0, 0),
+        start_cell="A",
         events_in_cell={"A": 1},
         num_events=1,
         num_cells=1,
         type=DigestType.ShortOneCell,
         end_time=datetime.datetime(2021, 8, 15, 10, 0, 0),
+        end_cell="A",
     )
     assert output[-1] == Digest(
         start_time=datetime.datetime(2022, 1, 1, 12, 1, 10),
+        start_cell="B1",
         events_in_cell={"B1": 6},
         num_events=6,
         num_cells=1,
         type=DigestType.LongOneCell,
         end_time=datetime.datetime(2022, 1, 1, 18, 0, 0),
+        end_cell="B1",
     )
 
 
@@ -123,17 +148,20 @@ def test_digest_long_3cell_flapping():
         ["2022-01-01 10:00:40", "C"],
         ["2022-01-01 10:00:45", "C"],
         ["2022-01-01 10:00:50", "B"],
-        ["2022-01-01 10:00:55", "A"],
+        ["2022-01-01 10:00:55", "C"],
     ]
     output = digest_generation(events_from_str(elist))
     assert len(output) == 1
     digest = output[0]
+    print(digest)
     assert digest.start_time == datetime.datetime(2022, 1, 1, 10, 0, 0)
     assert digest.cells == set(["A", "B", "C"])
     assert digest.num_events == len(elist)
     assert digest.num_cells == 3
     assert digest.type == DigestType.ShortThreeCell
     assert digest.end_time == datetime.datetime(2022, 1, 1, 10, 0, 55)
+    assert digest.start_cell == "A"
+    assert digest.end_cell == "C"
 
 
 def test_digest_back2back():
