@@ -13,6 +13,20 @@ from estat_2019_0396.digest_pandas import (
 
 
 @pytest.fixture()
+def sample_digests():
+    return [
+        Digest(
+            start_time=datetime.datetime(2022, 1, 1, 1, 0, 0),
+            end_time=datetime.datetime(2022, 1, 1, 5, 0, 0),
+            events_in_cell={"A": 10, "B": 4, "C": 3},
+            num_cells=3,
+            num_events=16,
+            type=DigestType.ShortThreeCell,
+        )
+    ]
+
+
+@pytest.fixture()
 def simple_events_df():
     return pd.DataFrame(
         {
@@ -71,41 +85,21 @@ def test_series_to_events():
     assert events[-1]["cell"] == "A"
 
 
-def test_dataframe_single():
-    digests = [
-        Digest(
-            start_time=datetime.datetime(2022, 1, 1, 1, 0, 0),
-            end_time=datetime.datetime(2022, 1, 1, 5, 0, 0),
-            cells=set(["A", "B", "C"]),
-            num_cells=3,
-            num_events=16,
-            type=DigestType.ShortThreeCell,
-        )
-    ]
-    df = digest_to_dataframe(digests)
+def test_dataframe_single(sample_digests):
+    df = digest_to_dataframe(sample_digests)
     print(df.T)
     assert isinstance(df, pd.DataFrame)
     assert "start_time" in df.columns
     assert "end_time" in df.columns
-    assert "cells" in df.columns
+    assert "events_in_cell" in df.columns
     assert "num_cells" in df.columns
     assert "num_events" in df.columns
     assert "type" in df.columns
     assert df.shape == (1, 6)
 
 
-def test_dataframe_dtypes():
-    digests = [
-        Digest(
-            start_time=datetime.datetime(2022, 1, 1, 1, 0, 0),
-            end_time=datetime.datetime(2022, 1, 1, 5, 0, 0),
-            cells=set(["A", "B", "C"]),
-            num_cells=3,
-            num_events=16,
-            type=DigestType.ShortThreeCell,
-        )
-    ]
-    df = digest_to_dataframe(digests)
+def test_dataframe_dtypes(sample_digests):
+    df = digest_to_dataframe(sample_digests)
     print(df.T)
     assert isinstance(df, pd.DataFrame)
     assert isinstance(df["type"].dtype, pd.StringDtype)
@@ -116,7 +110,7 @@ def test_dataframe_many():
         Digest(
             start_time=datetime.datetime(2022, 1, 1, 1, 0, 0),
             end_time=datetime.datetime(2022, 1, 1, 5, 0, 0),
-            cells=set(["A", "B", "C"]),
+            events_in_cell={"A": 10, "B": 5, "C": 1},
             num_cells=3,
             num_events=16,
             type=DigestType.ShortThreeCell,
@@ -124,7 +118,7 @@ def test_dataframe_many():
         Digest(
             start_time=datetime.datetime(2022, 1, 1, 1, 0, 0),
             end_time=datetime.datetime(2022, 1, 5, 0, 0, 0),
-            cells=set("A"),
+            events_in_cell={"A": 150},
             num_cells=1,
             num_events=150,
             type=DigestType.LongOneCell,
@@ -132,7 +126,7 @@ def test_dataframe_many():
         Digest(
             start_time=datetime.datetime(2022, 1, 5, 8, 0, 0),
             end_time=datetime.datetime(2022, 1, 5, 8, 12, 0),
-            cells=set(["A", "B"]),
+            events_in_cell={"A": 2, "B": 2},
             num_cells=2,
             num_events=4,
             type=DigestType.ShortTwoCell,
@@ -151,7 +145,7 @@ def test_digest_single():
     assert isinstance(df, pd.DataFrame)
     assert "start_time" in df.columns
     assert "end_time" in df.columns
-    assert "cells" in df.columns
+    assert "events_in_cell" in df.columns
     assert "num_cells" in df.columns
     assert "num_events" in df.columns
     assert "type" in df.columns
@@ -171,7 +165,7 @@ def test_digest_multi_user_simple_sorted(simple_events_df):
     assert "digest_id" in df.columns
     assert "start_time" in df.columns
     assert "end_time" in df.columns
-    assert "cells" in df.columns
+    assert "events_in_cell" in df.columns
     assert "num_cells" in df.columns
     assert "num_events" in df.columns
     assert "type" in df.columns

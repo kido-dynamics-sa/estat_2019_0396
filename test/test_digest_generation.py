@@ -94,7 +94,7 @@ def test_digest_a_bit_of_everything():
     assert len(output) == 6
     assert output[0] == Digest(
         start_time=datetime.datetime(2021, 8, 15, 10, 0, 0),
-        cells=set("A"),
+        events_in_cell={"A": 1},
         num_events=1,
         num_cells=1,
         type=DigestType.ShortOneCell,
@@ -102,7 +102,7 @@ def test_digest_a_bit_of_everything():
     )
     assert output[-1] == Digest(
         start_time=datetime.datetime(2022, 1, 1, 12, 1, 10),
-        cells=set(["B1"]),
+        events_in_cell={"B1": 6},
         num_events=6,
         num_cells=1,
         type=DigestType.LongOneCell,
@@ -127,14 +127,13 @@ def test_digest_long_3cell_flapping():
     ]
     output = digest_generation(events_from_str(elist))
     assert len(output) == 1
-    assert output[0] == Digest(
-        start_time=datetime.datetime(2022, 1, 1, 10, 0, 0),
-        cells=set(["A", "B", "C"]),
-        num_events=len(elist),
-        num_cells=3,
-        type=DigestType.ShortThreeCell,
-        end_time=datetime.datetime(2022, 1, 1, 10, 0, 55),
-    )
+    digest = output[0]
+    assert digest.start_time == datetime.datetime(2022, 1, 1, 10, 0, 0)
+    assert digest.cells == set(["A", "B", "C"])
+    assert digest.num_events == len(elist)
+    assert digest.num_cells == 3
+    assert digest.type == DigestType.ShortThreeCell
+    assert digest.end_time == datetime.datetime(2022, 1, 1, 10, 0, 55)
 
 
 def test_digest_back2back():
@@ -169,3 +168,30 @@ def test_digest_iter():
     output_dict = digest_generation_dict(events_from_str(elist))
     output_iter = digest_generation_iter(*times_cells_from_str(elist))
     assert output_dict == output_iter
+
+
+def test_digest_total_consistency():
+    elist = [
+        ["2021-08-15 10:00:00", "A"],
+        ["2021-08-18 10:00:00", "A"],
+        ["2021-09-15 10:00:00", "A"],
+        ["2021-09-15 10:00:01", "A"],
+        ["2022-01-01 10:00:00", "A"],
+        ["2022-01-01 12:00:00", "A"],
+        ["2022-01-01 12:01:00", "B1"],
+        ["2022-01-01 12:01:04", "A"],
+        ["2022-01-01 12:01:05", "B1"],
+        ["2022-01-01 12:01:06", "B1"],
+        ["2022-01-01 12:01:07", "A"],
+        ["2022-01-01 12:01:10", "B1"],
+        ["2022-01-01 14:00:00", "B1"],
+        ["2022-01-01 15:00:00", "B1"],
+        ["2022-01-01 16:00:00", "B1"],
+        ["2022-01-01 17:00:00", "B1"],
+        ["2022-01-01 18:00:00", "B1"],
+    ]
+    digests = digest_generation(events_from_str(elist))
+
+    for digest in digests:
+        assert digest.num_cells == len(digest.events_in_cell.keys())
+        assert digest.num_events == sum(digest.events_in_cell.values())
