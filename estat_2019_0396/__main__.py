@@ -26,8 +26,12 @@ def main(
     compression: Optional[Compression] = None,
 ):
     df = pd.read_csv(input, parse_dates=["time"])
+    if "user_type" in df:
+        user_props = ["user_type"]
+    else:
+        user_props = []
     print(
-        digest_multi_user(df).to_csv(
+        digest_multi_user(df, user_props=user_props).to_csv(
             output, compression=compression.value if compression else None, index=False
         )
     )

@@ -35,15 +35,17 @@ def digest_multi_user(
     user_col: str = "user",
     time_col: str = "time",
     cell_col: str = "cell",
+    user_props: List[str] = [],
 ) -> pd.DataFrame:
+    ngroups = 1 + len(user_props)
     return (
-        df.sort_values(by=["user", "time"])
-        .groupby(user_col)
+        df.sort_values(by=[user_col, time_col])
+        .groupby([user_col] + user_props)
         .apply(
             lambda x: digest_single_user(
                 x.reset_index(drop=True)[time_col], x.reset_index(drop=True)[cell_col]
             )
         )
         .reset_index()
-        .rename(columns={"level_1": "digest_id"})
+        .rename(columns={f"level_{ngroups}": "digest_id"})
     )
