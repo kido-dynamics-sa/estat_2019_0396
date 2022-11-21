@@ -2,6 +2,8 @@ import dataclasses
 import datetime
 import json
 
+import pytest
+
 from estat_2019_0396.digest_generation import (
     Digest,
     DigestEncoder,
@@ -11,6 +13,15 @@ from estat_2019_0396.digest_generation import (
     digest_generation_dict,
     digest_generation_iter,
 )
+
+
+@pytest.fixture
+def algo_default_params():
+    return {
+        "short_dt": 15,
+        "long_dt": 8 * 60 * 60,  # 8 hours
+        "cutoff": 24 * 60 * 60,  # 1 day
+    }
 
 
 def events_from_str(elist):
@@ -40,9 +51,9 @@ def test_json_parser():
     assert len(res) > 0
 
 
-def test_digest_single_event():
+def test_digest_single_event(algo_default_params):
     single_event = events_from_str([["2022-01-01 10:00:00", "A"]])
-    output = digest_generation(single_event)
+    output = digest_generation(single_event, **algo_default_params)
     assert len(output) == 1
     assert output[0].start_time == single_event[0]["time"]
     assert output[0].end_time == single_event[0]["time"]
@@ -52,7 +63,7 @@ def test_digest_single_event():
     assert output[0].start_cell == output[0].end_cell == "A"
 
 
-def test_digest_many_event_single_cell():
+def test_digest_many_event_single_cell(algo_default_params):
     times = [
         "2022-01-01 10:00:00",
         "2022-01-01 11:00:00",
@@ -62,7 +73,7 @@ def test_digest_many_event_single_cell():
         "2022-01-01 15:00:01",
     ]
     many_event_single_cell = events_from_str([[time, "Acell"] for time in times])
-    output = digest_generation(many_event_single_cell)
+    output = digest_generation(many_event_single_cell, **algo_default_params)
     assert len(output) == 1
     assert output[0].start_time == many_event_single_cell[0]["time"]
     assert output[0].end_time == many_event_single_cell[-1]["time"]
@@ -72,12 +83,12 @@ def test_digest_many_event_single_cell():
     assert output[0].start_cell == output[0].end_cell == "Acell"
 
 
-def test_digest_simple_2cell_flapping():
+def test_digest_simple_2cell_flapping(algo_default_params):
     elist = [
         ["2022-01-01 10:00:00", "A"],
         ["2022-01-01 10:00:05", "B"],
     ]
-    output = digest_generation(events_from_str(elist))
+    output = digest_generation(events_from_str(elist), **algo_default_params)
     assert len(output) == 1
     digest = output[0]
     print(digest)
@@ -91,7 +102,7 @@ def test_digest_simple_2cell_flapping():
     assert digest.end_cell == "B"
 
 
-def test_digest_a_bit_of_everything():
+def test_digest_a_bit_of_everything(algo_default_params):
     elist = [
         ["2021-08-15 10:00:00", "A"],
         ["2021-08-18 10:00:00", "A"],
@@ -111,7 +122,7 @@ def test_digest_a_bit_of_everything():
         ["2022-01-01 17:00:00", "B1"],
         ["2022-01-01 18:00:00", "B1"],
     ]
-    output = digest_generation(events_from_str(elist))
+    output = digest_generation(events_from_str(elist), **algo_default_params)
     assert len(output) == 6
     assert output[0] == Digest(
         start_time=datetime.datetime(2021, 8, 15, 10, 0, 0),
@@ -135,7 +146,7 @@ def test_digest_a_bit_of_everything():
     )
 
 
-def test_digest_long_3cell_flapping():
+def test_digest_long_3cell_flapping(algo_default_params):
     elist = [
         ["2022-01-01 10:00:00", "A"],
         ["2022-01-01 10:00:05", "B"],
@@ -150,7 +161,7 @@ def test_digest_long_3cell_flapping():
         ["2022-01-01 10:00:50", "B"],
         ["2022-01-01 10:00:55", "C"],
     ]
-    output = digest_generation(events_from_str(elist))
+    output = digest_generation(events_from_str(elist), **algo_default_params)
     assert len(output) == 1
     digest = output[0]
     print(digest)
@@ -164,7 +175,7 @@ def test_digest_long_3cell_flapping():
     assert digest.end_cell == "C"
 
 
-def test_digest_back2back():
+def test_digest_back2back(algo_default_params):
     elist = [
         ["2022-01-01 12:01:00", "A"],
         ["2022-01-01 12:01:02", "B"],
@@ -175,7 +186,7 @@ def test_digest_back2back():
         ["2022-01-01 14:00:00", "A"],
         ["2022-01-01 15:00:00", "A"],
     ]
-    output = digest_generation(events_from_str(elist))
+    output = digest_generation(events_from_str(elist), **algo_default_params)
     assert len(output) == 2
     assert output[0].end_time == output[1].start_time
     assert sum(o.num_events for o in output) == len(elist) + 1
@@ -223,3 +234,64 @@ def test_digest_total_consistency():
     for digest in digests:
         assert digest.num_cells == len(digest.events_in_cell.keys())
         assert digest.num_events == sum(digest.events_in_cell.values())
+
+
+def test_digest_short_dt():
+    elist = [
+        ["2022-01-01 10:00:00", "A"],
+        ["2022-01-01 10:00:05", "B"],
+        ["2022-01-01 10:00:10", "C"],
+        ["2022-01-01 10:00:15", "A"],
+        ["2022-01-01 10:00:20", "B"],
+        ["2022-01-01 10:00:25", "C"],
+        ["2022-01-01 10:00:30", "A"],
+        ["2022-01-01 10:00:35", "B"],
+        ["2022-01-01 10:00:40", "C"],
+        ["2022-01-01 10:00:45", "A"],
+        ["2022-01-01 10:00:50", "B"],
+        ["2022-01-01 10:00:55", "C"],
+    ]
+    events = events_from_str(elist)
+    assert len(digest_generation(events, short_dt=4)) == len(elist)
+    assert len(digest_generation(events, short_dt=5)) == len(elist)
+    assert len(digest_generation(events, short_dt=6)) == 1
+
+
+def test_digest_long_dt():
+    times = [
+        "2022-01-01 10:00:00",
+        "2022-01-01 11:00:00",
+        "2022-01-01 12:00:00",
+        "2022-01-01 13:00:00",
+        "2022-01-01 14:00:00",
+        "2022-01-01 15:00:00",
+    ]
+    many_event_single_cell = events_from_str([[time, "Acell"] for time in times])
+
+    assert len(digest_generation(many_event_single_cell, long_dt=30 * 60)) == len(times)
+    assert len(digest_generation(many_event_single_cell, long_dt=60 * 60)) == len(times)
+    assert len(digest_generation(many_event_single_cell, long_dt=60 * 60 + 1)) == 1
+    assert len(digest_generation(many_event_single_cell, long_dt=2 * 60 * 60)) == 1
+
+
+def test_digest_cutoff():
+    times = [
+        "2022-01-01 10:00:00",
+        "2022-01-01 11:00:00",
+        "2022-01-01 12:00:00",
+        "2022-01-01 13:00:00",
+        "2022-01-01 14:00:00",
+        "2022-01-01 15:00:00",
+    ]
+    many_event_single_cell = events_from_str([[time, "Acell"] for time in times])
+
+    assert len(digest_generation(many_event_single_cell, cutoff=24 * 60 * 60)) == 1
+    assert (
+        len(digest_generation(many_event_single_cell, cutoff=2 * 60 * 60))
+        == len(times) // 3
+    )
+    assert (
+        len(digest_generation(many_event_single_cell, cutoff=1 * 60 * 60))
+        == len(times) // 2
+    )
+    assert len(digest_generation(many_event_single_cell, cutoff=45 * 60)) == len(times)

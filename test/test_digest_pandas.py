@@ -232,3 +232,17 @@ def test_digest_multi_user_many_unsorted(simple_events_df, mixed_events_df):
     num_digest_per_user = df.groupby("user")["start_time"].count()
     assert num_digest_per_user["Agent1"] == 1
     assert num_digest_per_user["Agent2"] == 6
+
+
+def test_digest_multi_user_params(simple_events_df):
+    def max_hours(df):
+        return ((df["end_time"] - df["start_time"]) / pd.Timedelta("1H")).max()
+
+    events_df = simple_events_df
+    events_df["user"] = "Agent1"
+
+    assert max_hours(digest_multi_user(events_df)) == 4
+    assert max_hours(digest_multi_user(events_df, cutoff=61 * 60)) == 2
+    assert max_hours(digest_multi_user(events_df, cutoff=59 * 60)) == 1
+    assert max_hours(digest_multi_user(events_df, long_dt=61 * 60)) == 4
+    assert max_hours(digest_multi_user(events_df, long_dt=59 * 60)) == 0

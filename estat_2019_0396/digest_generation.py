@@ -13,6 +13,12 @@ class DigestType(Enum):
     ShortThreeCell = "3-cell-flapping"
 
 
+# DEFAULT PARAMETERS
+SHORT_DT = 15
+LONG_DT = 8 * 60 * 60  # 8 hours
+CUTOFF = 24 * 60 * 60  # 1 day
+
+
 @dataclass
 class Digest:
     start_time: datetime.datetime
@@ -64,9 +70,9 @@ def create_digest(time, cell):
 class Digestor:
     def __init__(
         self,
-        short_dt=15,
-        long_dt=8 * 60 * 60,
-        cutoff=24 * 60 * 60,
+        short_dt=SHORT_DT,
+        long_dt=LONG_DT,
+        cutoff=CUTOFF,
         t0=datetime.datetime(1500, 1, 1, 0, 0, 0),
     ):
         """State-machine that reads sequences of events and produces a sequence of digests."""
@@ -218,15 +224,26 @@ class Digestor:
         return [digest for digest in digests if digest]
 
 
-def digest_generation_dict(ordered_events):
-    digestor = Digestor()
+def digest_generation_dict(
+    ordered_events,
+    short_dt=SHORT_DT,
+    long_dt=LONG_DT,
+    cutoff=CUTOFF,
+):
+    digestor = Digestor(short_dt=short_dt, long_dt=long_dt, cutoff=cutoff)
     digests = digestor._process_events_dict(ordered_events)
     digests.append(digestor.close_digest())
     return digests
 
 
-def digest_generation_iter(ordered_times, ordered_cells):
-    digestor = Digestor()
+def digest_generation_iter(
+    ordered_times,
+    ordered_cells,
+    short_dt=SHORT_DT,
+    long_dt=LONG_DT,
+    cutoff=CUTOFF,
+):
+    digestor = Digestor(short_dt=short_dt, long_dt=long_dt, cutoff=cutoff)
     digests = digestor._process_events_iter(ordered_times, ordered_cells)
     digests.append(digestor.close_digest())
     return digests

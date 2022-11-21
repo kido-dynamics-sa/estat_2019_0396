@@ -26,8 +26,8 @@ def digest_to_dataframe(digests: List[Digest]) -> pd.DataFrame:
     ).astype({"type": "string"})
 
 
-def digest_single_user(times: pd.Series, cells: pd.Series) -> pd.DataFrame:
-    return digest_to_dataframe(digest_generation_iter(times, cells))
+def digest_single_user(times: pd.Series, cells: pd.Series, **kwargs) -> pd.DataFrame:
+    return digest_to_dataframe(digest_generation_iter(times, cells, **kwargs))
 
 
 def digest_multi_user(
@@ -36,14 +36,17 @@ def digest_multi_user(
     time_col: str = "time",
     cell_col: str = "cell",
     user_props: List[str] = [],
+    **kwargs,
 ) -> pd.DataFrame:
     ngroups = 1 + len(user_props)
     return (
         df.sort_values(by=[user_col, time_col])
-        .groupby([user_col] + user_props)
+        .groupby([user_col] + user_props, group_keys=True)
         .apply(
             lambda x: digest_single_user(
-                x.reset_index(drop=True)[time_col], x.reset_index(drop=True)[cell_col]
+                x.reset_index(drop=True)[time_col],
+                x.reset_index(drop=True)[cell_col],
+                **kwargs,
             )
         )
         .reset_index()
