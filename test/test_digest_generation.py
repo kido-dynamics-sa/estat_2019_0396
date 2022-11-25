@@ -295,3 +295,8 @@ def test_digest_cutoff():
         == len(times) // 2
     )
     assert len(digest_generation(many_event_single_cell, cutoff=45 * 60)) == len(times)
+
+
+def test_digest_empty():
+    assert digest_generation([]) == []
+    assert digest_generation_iter([], []) == []

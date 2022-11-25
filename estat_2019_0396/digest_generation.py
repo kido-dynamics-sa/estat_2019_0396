@@ -232,7 +232,9 @@ def digest_generation_dict(
 ):
     digestor = Digestor(short_dt=short_dt, long_dt=long_dt, cutoff=cutoff)
     digests = digestor._process_events_dict(ordered_events)
-    digests.append(digestor.close_digest())
+    last_digest = digestor.close_digest()
+    if last_digest:
+        digests.append(last_digest)
     return digests
 
 
@@ -245,7 +247,9 @@ def digest_generation_iter(
 ):
     digestor = Digestor(short_dt=short_dt, long_dt=long_dt, cutoff=cutoff)
     digests = digestor._process_events_iter(ordered_times, ordered_cells)
-    digests.append(digestor.close_digest())
+    last_digest = digestor.close_digest()
+    if last_digest:
+        digests.append(last_digest)
     return digests
 
 

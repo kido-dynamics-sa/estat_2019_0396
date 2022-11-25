@@ -9,6 +9,9 @@ python_version = "3.9"
 [packages]
 pandas = ">1.5.*"
 typer = "*"
+pyarrow = "*"
+fsspec = "*"
+s3fs = "*"
 
 [dev-packages]
 black = "*"
