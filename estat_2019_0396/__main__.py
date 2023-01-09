@@ -7,12 +7,17 @@ from typing import Optional
 import pandas as pd
 import typer
 
-from estat_2019_0396 import digest_multi_user, generate_digests_observation_window
+from estat_2019_0396 import (
+    digest_multi_user,
+    generate_digests_observation_window,
+    permanence_multi_user,
+)
 
 
 class Compression(enum.Enum):
     ZIP = "zip"
     GZIP = "gzip"
+    BZ2 = "bz2"
 
 
 class Format(enum.Enum):
@@ -105,6 +110,30 @@ def analysis(
         print(json.dumps(metadata))
 
 
+def presence(
+    input_file: str = input_file,
+    output: str = output_file,
+    compression: Optional[Compression] = None,
+    input_format: Format = DEFAULT_FORMAT,
+    output_format: Format = DEFAULT_FORMAT,
+    # meta: bool = False,
+):
+    df = read_dataset(input_file, input_format)
+    permanence = permanence_multi_user(
+        df, footprint_col="tile15", user_props=["user_type"]
+    )
+    print(
+        write_dataset(
+            permanence,
+            output,
+            output_format,
+            compression,
+        )
+    )
+    # if meta:
+    #     print(json.dumps(metadata))
+
+
 # def parametric_study(
 #     input: Path = input_file,
 #     output: Optional[Path] = output_file,
@@ -143,4 +172,5 @@ def analysis(
 if __name__ == "__main__":
     # typer.run(main)
     # typer.run(parametric_study)
-    typer.run(analysis)
+    # typer.run(analysis)
+    typer.run(presence)

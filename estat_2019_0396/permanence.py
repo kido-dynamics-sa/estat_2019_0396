@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import Callable, List
 
 import numpy as np
 import pandas as pd
@@ -26,12 +26,8 @@ def get_permanence(
         footprints.shift(1).values, footprints.shift(-1).values
     ) / (dts.values + dts.shift(-1).values)
 
-    print(mean_speed)
-    print(dts)
     d = dts.loc[same_footprint]
     s = semi_times.loc[(~same_footprint & (mean_speed < max_speed)).values]
-    print(d)
-    print(s)
     return (
         pd.concat(
             [
@@ -41,4 +37,27 @@ def get_permanence(
         )
         .groupby(level=0)
         .sum()
+        .rename("permanence_time")
     )
+
+
+def permanence_multi_user(
+    df: pd.DataFrame,
+    user_col: str = "user",
+    time_col: str = "time",
+    footprint_col: str = "cell",
+    user_props: List[str] = [],
+    **kwargs,
+) -> pd.DataFrame:
+    permanence = (
+        df.sort_values(by=[user_col, time_col])
+        .groupby([user_col] + user_props, group_keys=True)
+        .apply(
+            lambda x: get_permanence(
+                x.reset_index(drop=True)[footprint_col],
+                x.reset_index(drop=True)[time_col],
+                **kwargs,
+            )
+        )
+    )
+    return permanence if permanence.empty else permanence.reset_index()
