@@ -110,10 +110,28 @@ def test_get_permanence_triplet(zero_distance):
     ]
     times = pd.to_datetime([e[0] for e in elist]).to_series()
     cells = pd.Series([e[1] for e in elist])
-    p = get_permanence(cells, times, distance_func=zero_distance)
+    p = get_permanence(
+        cells, times, distance_func=zero_distance, semi_time_threshold=999999
+    )
     print("RESULT", p)
     assert p.shape == (1,)
     assert p["B"] == 60 * 60 + 5 * 60  # half of 2h + half of 10 minutes
+
+
+def test_get_permanence_threshold(zero_distance):
+    elist = [
+        ["2022-01-01 10:00:00", "A"],
+        ["2022-01-01 12:00:00", "B"],
+        ["2022-01-01 12:10:00", "A"],
+    ]
+    times = pd.to_datetime([e[0] for e in elist]).to_series()
+    cells = pd.Series([e[1] for e in elist])
+    p = get_permanence(
+        cells, times, distance_func=zero_distance, semi_time_threshold=10 * 60
+    )
+    print("RESULT", p)
+    assert p.shape == (1,)
+    assert p["B"] == (10 + 5) * 60
 
 
 def test_get_permanence_slow_speed():
@@ -131,7 +149,13 @@ def test_get_permanence_slow_speed():
     ]
     times = pd.to_datetime([e[0] for e in elist]).to_series()
     cells = pd.Series([e[1] for e in elist])
-    p = get_permanence(cells, times, distance_func=unit_distance, max_speed=max_speed)
+    p = get_permanence(
+        cells,
+        times,
+        distance_func=unit_distance,
+        max_speed=max_speed,
+        semi_time_threshold=9999,
+    )
     print("RESULT", p)
     assert p.shape == (3,)
     assert p["C"] == 5 * 60 + (40 * 60 + 2 * 60 * 60) / 2

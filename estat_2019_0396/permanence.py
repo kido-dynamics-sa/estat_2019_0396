@@ -15,13 +15,16 @@ def get_permanence(
     times: pd.Series,
     max_speed: float = MAX_SPEED,
     distance_func: Callable = footprint_distance,
+    semi_time_threshold: int = 8 * 60,
 ) -> pd.Series:
 
     times = times.set_axis(footprints)
     footprints = footprints.set_axis(footprints)
     same_footprint = (footprints == footprints.shift(1)).values
     dts = (times - times.shift(1)) / pd.Timedelta("1s")
-    semi_times = 0.5 * (dts + (times.shift(-1) - times) / pd.Timedelta("1s"))
+    semi_times = np.minimum(0.5 * dts, semi_time_threshold) + np.minimum(
+        0.5 * (times.shift(-1) - times) / pd.Timedelta("1s"), semi_time_threshold
+    )
     mean_speed = distance_func(
         footprints.shift(1).values, footprints.shift(-1).values
     ) / (dts.values + dts.shift(-1).values)
