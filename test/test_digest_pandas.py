@@ -412,7 +412,7 @@ def test_digest_multi_user_clip_donothing(simple_events_df, mixed_events_df):
 
 
 def test_digest_single_user_empty():
-    assert digest_single_user(pd.Series(), pd.Series()).empty
+    assert digest_single_user(pd.Series(dtype=float), pd.Series(dtype=float)).empty
 
 
 def test_digest_mutli_user_empty():

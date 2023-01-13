@@ -161,3 +161,9 @@ def test_get_permanence_slow_speed():
     assert p["C"] == 5 * 60 + (40 * 60 + 2 * 60 * 60) / 2
     assert p["D"] == (30 * 60 + 40 * 60 + 2 * 60 * 60) / 2
     assert p["E"] == 1.5 * 60 * 60 / 2
+
+
+def test_get_permanence_maxdt(simple_events_df):
+    p = get_permanence(simple_events_df["cell"], simple_events_df["time"], max_dt=5)
+    print("RESULT", p)
+    assert p.shape == (0,)
