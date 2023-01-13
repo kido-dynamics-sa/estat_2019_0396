@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from estat_2019_0396.permanence import get_permanence
+from estat_2019_0396.permanence import TimePeriod, get_permanence
 
 
 @pytest.fixture()
@@ -13,6 +13,18 @@ def simple_events_df():
                 "2022-01-01 01:00:00", "2022-01-01 05:00:00", freq="1H"
             ),
             "cell": pd.Series(["A"] * 5),
+        }
+    )
+
+
+@pytest.fixture()
+def simple_events_multiday_df():
+    return pd.DataFrame(
+        {
+            "time": pd.date_range(
+                "2022-01-01 00:00:00", "2022-01-05 08:00:00", freq="8H"
+            ),
+            "cell": pd.Series(["A"] * 14),
         }
     )
 
@@ -167,3 +179,25 @@ def test_get_permanence_maxdt(simple_events_df):
     p = get_permanence(simple_events_df["cell"], simple_events_df["time"], max_dt=5)
     print("RESULT", p)
     assert p.shape == (0,)
+
+
+def test_get_permanence_bydate(simple_events_multiday_df):
+    c, t = simple_events_multiday_df["cell"], simple_events_multiday_df["time"]
+    p = get_permanence(c, t)
+    print("RESULT", p)
+    assert p.shape == (1,)
+    p = get_permanence(
+        c,
+        t,
+        time_grouping=TimePeriod.daily,
+    )
+    print("RESULT", p)
+    assert p.shape == (5,)
+
+    p = get_permanence(
+        c,
+        t,
+        time_grouping=TimePeriod.monthly,
+    )
+    print("RESULT", p)
+    assert p.shape == (1,)

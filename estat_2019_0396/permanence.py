@@ -1,4 +1,5 @@
-from typing import Callable, List
+import enum
+from typing import Callable, List, Optional
 
 import numpy as np
 import pandas as pd
@@ -10,6 +11,12 @@ def footprint_distance(fp1: pd.Series, fp2: pd.Series) -> pd.Series:
     return pd.Series(np.ones(fp1.shape[0])) * np.inf
 
 
+class TimePeriod(enum.Enum):
+    daily = "D"
+    weekly = "W"
+    monthly = "M"
+
+
 def get_permanence(
     footprints: pd.Series,
     times: pd.Series,
@@ -17,10 +24,18 @@ def get_permanence(
     distance_func: Callable = footprint_distance,
     semi_time_threshold: int = 8 * 60,
     max_dt: int = 12 * 60 * 60,
+    time_grouping: Optional[TimePeriod] = None,
 ) -> pd.Series:
 
-    times = times.set_axis(footprints)
-    footprints = footprints.set_axis(footprints)
+    if time_grouping:
+        axis = [footprints, times.dt.to_period(time_grouping.value).dt.start_time]
+        levels = [0, 1]
+    else:
+        axis = footprints
+        levels = [0]
+
+    times = times.set_axis(axis)
+    footprints = footprints.set_axis(axis)
     dts = (times - times.shift(1)) / pd.Timedelta("1s")
     same_footprint = ((footprints == footprints.shift(1)) & (dts < max_dt)).values
     semi_times = np.minimum(0.5 * dts, semi_time_threshold) + np.minimum(
@@ -41,7 +56,7 @@ def get_permanence(
                 s,
             ]
         )
-        .groupby(level=0)
+        .groupby(level=levels)
         .sum()
         .rename("permanence_time")
     )
