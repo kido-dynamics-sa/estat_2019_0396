@@ -8,10 +8,12 @@ import pandas as pd
 import typer
 
 from estat_2019_0396 import (
+    TimePeriod,
     digest_multi_user,
     generate_digests_observation_window,
     permanence_multi_user,
 )
+from estat_2019_0396.mercator import distance_codes
 
 
 class Compression(enum.Enum):
@@ -110,6 +112,10 @@ def analysis(
         print(json.dumps(metadata))
 
 
+def distance_func(c1, c2):
+    return pd.Series(distance_codes(c1, c2, z=15))
+
+
 def presence(
     input_file: str = input_file,
     output: str = output_file,
@@ -120,7 +126,11 @@ def presence(
 ):
     df = read_dataset(input_file, input_format)
     permanence = permanence_multi_user(
-        df, footprint_col="tile15", user_props=["user_type"]
+        df,
+        footprint_col="tile15",
+        user_props=["user_type"],
+        distance_func=distance_func,
+        time_grouping=TimePeriod.daily,
     )
     print(
         write_dataset(
