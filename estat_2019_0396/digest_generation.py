@@ -13,14 +13,34 @@ class DigestType(Enum):
     ShortThreeCell = "3-cell-flapping"
 
 
+# DEFAULT PARAMETERS
+SHORT_DT = 15
+LONG_DT = 8 * 60 * 60  # 8 hours
+CUTOFF = 24 * 60 * 60  # 1 day
+
+
 @dataclass
 class Digest:
     start_time: datetime.datetime
-    cells: set[str]
+    start_cell: str
+    events_in_cell: dict[str, int]
     num_events: int
     num_cells: int
     type: DigestType = DigestType.ShortOneCell
     end_time: Optional[datetime.datetime] = None
+    end_cell: Optional[str] = None
+
+    @property
+    def cells(self):
+        return self.events_in_cell.keys()
+
+    def add_event(self, cell):
+        if cell in self.events_in_cell:
+            self.events_in_cell[cell] += 1
+        else:
+            self.events_in_cell[cell] = 1
+            self.num_cells += 1
+        self.num_events += 1
 
 
 class DigestEncoder(json.JSONEncoder):
@@ -38,15 +58,21 @@ class DigestEncoder(json.JSONEncoder):
 
 
 def create_digest(time, cell):
-    return Digest(start_time=time, cells=set([cell]), num_events=1, num_cells=1)
+    return Digest(
+        start_time=time,
+        events_in_cell={cell: 1},
+        num_events=1,
+        num_cells=1,
+        start_cell=cell,
+    )
 
 
 class Digestor:
     def __init__(
         self,
-        short_dt=15,
-        long_dt=8 * 60 * 60,
-        cutoff=24 * 60 * 60,
+        short_dt=SHORT_DT,
+        long_dt=LONG_DT,
+        cutoff=CUTOFF,
         t0=datetime.datetime(1500, 1, 1, 0, 0, 0),
     ):
         """State-machine that reads sequences of events and produces a sequence of digests."""
@@ -75,18 +101,15 @@ class Digestor:
         previous_digest = self.current_digest
         if previous_digest:
             previous_digest.end_time = self.last_time
+            previous_digest.end_cell = self.last_cell
         self.current_digest = None
         return previous_digest
 
-    def continue_digest(self, time) -> None:
+    def continue_digest(self, time, cell) -> None:
         """Add event to the current digest."""
         self.last_time = time
-        self.current_digest.num_events += 1
-
-    def add_cell(self, cell) -> None:
-        """Add cell to the current digest."""
-        self.current_digest.cells.add(cell)
-        self.current_digest.num_cells += 1
+        self.last_cell = cell
+        self.current_digest.add_event(cell)
 
     def process_event(self, time, cell, last_time=None) -> Optional[Digest]:
         """Advance the state by processing the current event.
@@ -122,33 +145,31 @@ class Digestor:
                 )
             if self.current_digest.type == DigestType.ShortOneCell:
                 if dt < self.short_dt and cell in self.current_digest.cells:
-                    self.continue_digest(time)
+                    self.continue_digest(time, cell)
                 elif dt < self.short_dt:
-                    self.continue_digest(time)
-                    self.add_cell(cell)
+                    self.continue_digest(time, cell)
                     self.current_digest.type = DigestType.ShortTwoCell
                 elif dt < self.long_dt and cell in self.current_digest.cells:
-                    self.continue_digest(time)
+                    self.continue_digest(time, cell)
                     self.current_digest.type = DigestType.LongOneCell
                 else:
                     return self.close_and_start(time, cell)
             elif self.current_digest.type == DigestType.ShortTwoCell:
                 if dt < self.short_dt and cell in self.current_digest.cells:
-                    self.continue_digest(time)
+                    self.continue_digest(time, cell)
                 elif dt < self.short_dt:
-                    self.continue_digest(time)
-                    self.add_cell(cell)
+                    self.continue_digest(time, cell)
                     self.current_digest.type = DigestType.ShortThreeCell
                 else:
                     return self.close_and_start(time, cell)
             elif self.current_digest.type == DigestType.ShortThreeCell:
                 if dt < self.short_dt and cell in self.current_digest.cells:
-                    self.continue_digest(time)
+                    self.continue_digest(time, cell)
                 else:
                     return self.close_and_start(time, cell)
             elif self.current_digest.type == DigestType.LongOneCell:
                 if dt < self.long_dt and cell in self.current_digest.cells:
-                    self.continue_digest(time)
+                    self.continue_digest(time, cell)
                 else:
                     return self.close_and_start(time, cell)
             else:
@@ -203,17 +224,32 @@ class Digestor:
         return [digest for digest in digests if digest]
 
 
-def digest_generation_dict(ordered_events):
-    digestor = Digestor()
+def digest_generation_dict(
+    ordered_events,
+    short_dt=SHORT_DT,
+    long_dt=LONG_DT,
+    cutoff=CUTOFF,
+):
+    digestor = Digestor(short_dt=short_dt, long_dt=long_dt, cutoff=cutoff)
     digests = digestor._process_events_dict(ordered_events)
-    digests.append(digestor.close_digest())
+    last_digest = digestor.close_digest()
+    if last_digest:
+        digests.append(last_digest)
     return digests
 
 
-def digest_generation_iter(ordered_times, ordered_cells):
-    digestor = Digestor()
+def digest_generation_iter(
+    ordered_times,
+    ordered_cells,
+    short_dt=SHORT_DT,
+    long_dt=LONG_DT,
+    cutoff=CUTOFF,
+):
+    digestor = Digestor(short_dt=short_dt, long_dt=long_dt, cutoff=cutoff)
     digests = digestor._process_events_iter(ordered_times, ordered_cells)
-    digests.append(digestor.close_digest())
+    last_digest = digestor.close_digest()
+    if last_digest:
+        digests.append(last_digest)
     return digests
 
 
